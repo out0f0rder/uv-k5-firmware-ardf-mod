@@ -25,8 +25,9 @@
 #include <string.h>
 
 void UI_DisplayWelcome(void) {
-  memset(gStatusLine, 0, sizeof(gStatusLine));
-  memset(gFrameBuffer, 0, sizeof(gFrameBuffer));
+
+  UI_ClearStatusLine();
+  UI_ClearFrameBuffer();
 
   if (gEeprom.POWER_ON_DISPLAY_MODE == POWER_ON_DISPLAY_MODE_FULL_SCREEN) {
     ST7565_FillScreen(0xFF);

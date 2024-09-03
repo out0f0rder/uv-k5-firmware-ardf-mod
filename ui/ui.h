@@ -31,16 +31,14 @@ typedef enum GUI_DisplayType_t {
   DISPLAY_AIRCOPY = 0x04U,
 #endif
   DISPLAY_CONTEXT_MENU = 0x05U,
-  DISPLAY_APP_MENU = 0x06U,
+  //DISPLAY_APP_MENU = 0x06U,
   DISPLAY_INVALID = 0xFFU,
 } GUI_DisplayType_t;
 
 typedef enum GUI_AppType_t {
   APP_NONE,
   APP_SPLIT,
-  APP_SCANNER,
-  APP_SCANLIST,
-  APP_AB_SCANNER,
+  APP_SCANNER
 } GUI_AppType_t;
 
 typedef struct App {

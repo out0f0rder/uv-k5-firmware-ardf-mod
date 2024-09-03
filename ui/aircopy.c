@@ -28,7 +28,7 @@ void UI_DisplayAircopy(void)
 {
 	char String[16];
 
-	memset(gFrameBuffer, 0, sizeof(gFrameBuffer));
+    UI_ClearFrameBuffer();
 
 	if (gAircopyState == AIRCOPY_READY) {
 		strcpy(String, "AIR COPY(RDY)");

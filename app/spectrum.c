@@ -596,7 +596,7 @@ static void DrawSpectrum() {
       continue;
     }
     uint16_t rssi = rssiHistory[i];
-    DrawHLine(Rssi2Y(rssi), DrawingEndY, x, true);
+    DrawVLine(Rssi2Y(rssi), DrawingEndY, x, true);
   }
 }
 
@@ -1075,7 +1075,7 @@ static void RenderFreqInput() {
 }
 
 static void RenderStatus() {
-  memset(gStatusLine, 0, sizeof(gStatusLine));
+  UI_ClearStatusLine();
   DrawStatus();
   ST7565_BlitStatusLine();
 }
@@ -1176,7 +1176,8 @@ static void RenderStill() {
 }
 
 static void Render() {
-  memset(gFrameBuffer, 0, sizeof(gFrameBuffer));
+
+  UI_ClearFrameBuffer();
 
   switch (currentState) {
   case SPECTRUM:

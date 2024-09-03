@@ -8,3 +8,5 @@ sram-overlay
 sram-overlay.bin
 __pycache__/
 .vscode/
+K5TOOL.log
+K5TOOL.log.bak

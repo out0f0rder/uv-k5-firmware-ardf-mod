@@ -21,6 +21,7 @@
 #include <stdint.h>
 
 #define LCD_WIDTH 128
+#define LCD_HEIGHT 56
 
 extern uint8_t gStatusLine[LCD_WIDTH];
 extern uint8_t gFrameBuffer[7][LCD_WIDTH];

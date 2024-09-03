@@ -128,6 +128,7 @@ void GENERIC_Key_PTT(bool bKeyPressed) {
         gPttDebounceCounter = 0;
         return;
       }
+      /*
       if (gAppToDisplay != APP_SCANNER) {
         if (gCurrentFunction == FUNCTION_TRANSMIT && gRTTECountdown == 0) {
           gInputBoxIndex = 0;
@@ -160,6 +161,7 @@ void GENERIC_Key_PTT(bool bKeyPressed) {
         gInputBoxIndex = 0;
         return;
       }
+      */
       gRequestDisplayScreen = DISPLAY_MAIN;
       gEeprom.CROSS_BAND_RX_TX = gBackupCROSS_BAND_RX_TX;
       gUpdateStatus = true;

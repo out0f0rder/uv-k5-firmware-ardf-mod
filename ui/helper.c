@@ -24,6 +24,21 @@
 #include <stdint.h>
 #include <string.h>
 
+
+font_desc_t fonts[cntFONT_TYPE] = {
+    {3, 5, 100, (uint8_t *)gFont3x5}, //FONT_SMALLEST
+    {6, 8, 95, (uint8_t *)gFontSmall}, //FONT_SMALL
+    {6, 8, 95, (uint8_t *)gFontSmallBold}, //FONT_SMALL_BOLD
+    {16, 8, 95, (uint8_t *)gFontBig}, //FONT_BIG
+}; 
+
+//extern const uint8_t gFontBig[95][16];
+//extern const uint8_t gFontSmallDigits[11][7];
+//extern const uint8_t gFont3x5[160][3];
+//extern const uint8_t gFontSmall[95][6];
+//extern const uint8_t gFontSmallBold[95][6];
+//extern const uint8_t gFontBigDigits[11][26];
+
 void UI_GenerateChannelString(char *pString, uint8_t Channel) {
   uint8_t i;
 
@@ -89,6 +104,7 @@ void UI_PrintString(const char *pString, uint8_t Start, uint8_t End,
   }
 }
 
+//UI_PrintStringSmall(str, 30, 55, 0);
 void UI_PrintStringSmall(const char *pString, uint8_t Start, uint8_t End,
                          uint8_t Line) {
   const size_t Length = strlen(pString);
@@ -182,6 +198,7 @@ void UI_DisplaySmallDigits(uint8_t Size, const char *pString, uint8_t X,
 }
 
 void PutPixel(uint8_t x, uint8_t y, uint8_t fill) {
+  if((x>=LCD_WIDTH) || (y>=LCD_HEIGHT)) return;
   if (fill == 1) {
     gFrameBuffer[y >> 3][x] |= 1 << (y & 7);
   } else if (fill == 2) {
@@ -199,12 +216,33 @@ void PutPixelStatus(uint8_t x, uint8_t y, bool fill) {
   }
 }
 
-void DrawHLine(int sy, int ey, int nx, bool fill) {
+void DrawVLine(int sy, int ey, int nx, bool fill) {
   for (uint8_t i = sy; i <= ey; i++) {
-    if (i < 56 && nx < LCD_WIDTH) {
+    if (i < LCD_HEIGHT && nx < LCD_WIDTH) {
       PutPixel(nx, i, fill);
     }
   }
+}
+
+void DrawHLine(int sx, int ex, int ny, bool fill) {
+  for (uint8_t i = sx; i <= ex; i++) {
+    if (i < LCD_WIDTH && ny < LCD_HEIGHT) {
+      PutPixel(i, ny, fill);
+    }
+  }
+}
+
+void DrawRect(int x, int y, int w, int h, bool color) {
+    DrawHLine(x, x + w, y, color);
+    DrawVLine(y, y + h, x, color);
+    DrawHLine(x, x + w, y + h, color);
+    DrawVLine(y, y + h, x + w, color);
+}
+
+void FillRect (int x, int y, int w, int h, bool color) {
+    for(int i=0;i<h;i++) {
+        DrawHLine(x, x + w, y + i, color);
+    }
 }
 
 void UI_PrintStringSmallest(const char *pString, uint8_t x, uint8_t y,
@@ -229,6 +267,54 @@ void UI_PrintStringSmallest(const char *pString, uint8_t x, uint8_t y,
     }
     x += 4;
   }
+}
+
+void UI_PrintDigitLarge16x26(uint8_t digit, uint8_t x, uint8_t y, bool fill) {
+  uint16_t pixels;
+
+  for(uint8_t i = 0; i < 26; i++) {
+    pixels = gFontBigDigits[digit][i];
+    for (uint8_t j = 0; j < 8; j++) {
+        if (pixels & 1) {
+            FillRect(x + 2*(i - (i>13?13:0)), y + 2*(j + (i>13?8:0)), 2, 2, fill);
+        }
+        pixels >>= 1;
+    }
+  }
+}
+
+
+void UI_PrintChar(const char *str, uint8_t x, uint8_t y, font_t font, bool fill) {
+
+}
+
+void UI_Printf(uint8_t x, uint8_t y, font_t font, bool fill, const char *format, ...)
+{
+	char buff[64];
+    va_list args;
+    va_start( args, format );
+	//sprintf(buff, format, args);
+	vsnprintf(buff, 64, format, args);
+	switch(font) {
+        case FONT_SMALLEST:
+            UI_PrintStringSmallest(buff, x, y, false, fill);
+            break;
+        case FONT_SMALL:
+            if(fill) UI_PrintStringSmall(buff, x, x, y/8);
+            break;
+        default:
+            if(fill) UI_PrintString(buff, x, x, y/8, 10, false);
+            break;
+    }
+    va_end( args );
+}
+
+void UI_ClearFrameBuffer() {
+  memset(gFrameBuffer, 0, sizeof(gFrameBuffer));
+}
+
+void UI_ClearStatusLine() {
+  memset(gStatusLine, 0, sizeof(gStatusLine));
 }
 
 void UI_ClearAppScreen() {

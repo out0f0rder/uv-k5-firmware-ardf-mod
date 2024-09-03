@@ -38,15 +38,15 @@
 
 GUI_DisplayType_t gScreenToDisplay;
 GUI_DisplayType_t gRequestDisplayScreen = DISPLAY_INVALID;
+
+/**/
 GUI_AppType_t gAppToDisplay = APP_SPLIT;
 
 const App apps[4] = {
     {""},
     {"Split"},
     {"Scanner"},
-    {"Scanlist", NULL, SCANLIST_update, SCANLIST_render, SCANLIST_key},
-    /* {"A to B scanner", ABSCANNER_init, ABSCANNER_update, ABSCANNER_render,
-     ABSCANNER_key}, */
+    //{"Scanlist", NULL, SCANLIST_update, SCANLIST_render, SCANLIST_key},
 };
 
 uint8_t gAskForConfirmation;
@@ -61,12 +61,13 @@ void UI_DisplayApp(void) {
   }
 }
 
+
 void GUI_DisplayScreen(void) {
   switch (gScreenToDisplay) {
   case DISPLAY_MAIN:
-    if (gAppToDisplay != APP_SCANLIST) {
+    //if (gAppToDisplay != APP_SCANLIST) {
       UI_DisplayMain();
-    }
+    //}
     UI_DisplayApp();
     break;
 #if defined(ENABLE_FMRADIO)
@@ -80,9 +81,9 @@ void GUI_DisplayScreen(void) {
   case DISPLAY_CONTEXT_MENU:
     UI_DisplayContextMenu();
     break;
-  case DISPLAY_APP_MENU:
-    UI_DisplayAppMenu();
-    break;
+  //case DISPLAY_APP_MENU: 
+  //  UI_DisplayAppMenu();
+  //  break;
 #if defined(ENABLE_AIRCOPY)
   case DISPLAY_AIRCOPY:
     UI_DisplayAircopy();

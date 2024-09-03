@@ -1,5 +1,6 @@
 #include "appmenu.h"
 
+/*
 void APPMENU_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld) {
   uint8_t index = Key - KEY_0;
   switch (Key) {
@@ -27,3 +28,4 @@ void APPMENU_ProcessKeys(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld) {
     break;
   }
 }
+*/

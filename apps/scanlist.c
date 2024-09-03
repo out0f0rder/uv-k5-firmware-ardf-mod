@@ -78,7 +78,8 @@ void SCANLIST_key(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld) {
 void SCANLIST_render() {
   char String[32];
   char channelName[16];
-  memset(gFrameBuffer, 0, sizeof(gFrameBuffer));
+
+  UI_ClearFrameBuffer();
 
   const uint8_t count = 200;
   const uint8_t perScreen = 7;

@@ -33,6 +33,7 @@
 #include "main.h"
 #include "scanner.h"
 #include "spectrum.h"
+#include "ardf.h"
 
 static void SwitchActiveVFO() {
   uint8_t Vfo = gEeprom.TX_VFO;
@@ -88,9 +89,13 @@ static void MAIN_Key_DIGITS(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld) {
     VFO_Info_t *vfoInfo = &gEeprom.VfoInfo[Vfo];
     switch (Key) {
     case KEY_0:
-#if defined(ENABLE_FMRADIO)
-      ACTION_FM();
-#endif
+        #if defined(ENABLE_FMRADIO)
+            ACTION_FM();
+        #else
+            gCurrentFunction = 0;
+            APP_RunARDF();
+            gRequestDisplayScreen = DISPLAY_MAIN;
+        #endif
       break;
 
     case KEY_1:
@@ -264,7 +269,13 @@ static void MAIN_Key_MENU(bool bKeyPressed, bool bKeyHeld) {
       return;
     } else {
 
-      // SHORT PRESS
+        if (!gInputBoxIndex) {
+        gFlagRefreshSetting = true;
+        gRequestDisplayScreen = DISPLAY_MENU;
+        }
+        return;
+
+      /*// SHORT PRESS
       gBeepToPlay = BEEP_1KHZ_60MS_OPTIONAL;
       if (gInputBoxIndex) {
         gInputBoxIndex = 0;
@@ -273,9 +284,10 @@ static void MAIN_Key_MENU(bool bKeyPressed, bool bKeyHeld) {
         gRequestDisplayScreen = DISPLAY_APP_MENU;
       }
       return;
+      */
     }
   }
-
+/*
   if (bKeyHeld && bKeyPressed) {
     // LONG PRESS
     if (!gInputBoxIndex) {
@@ -285,6 +297,8 @@ static void MAIN_Key_MENU(bool bKeyPressed, bool bKeyHeld) {
 
     return;
   }
+*/
+
 }
 
 static void MAIN_Key_STAR(bool bKeyPressed, bool bKeyHeld) {

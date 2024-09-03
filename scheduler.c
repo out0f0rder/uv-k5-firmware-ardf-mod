@@ -94,3 +94,7 @@ void SystickHandler(void) {
     gVoxStopCountdown--;
   }
 }
+
+uint32_t getGlobalSysTick() {
+    return gGlobalSysTickCounter;
+}

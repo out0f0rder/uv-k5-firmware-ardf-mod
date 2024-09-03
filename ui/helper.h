@@ -20,6 +20,30 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+typedef enum {
+    FONT_SMALLEST,
+    FONT_SMALL,
+    FONT_SMALL_BOLD,
+    FONT_BIG,
+    cntFONT_TYPE
+} font_t;
+
+typedef struct {
+    uint8_t glyphW;
+    uint8_t glyphH;
+    uint8_t glyphsCnt;
+    uint8_t *glyphs;
+} font_desc_t;
+
+
+#define LINE_0 (0)
+#define LINE_1 (8)
+#define LINE_2 (16)
+#define LINE_3 (24)
+#define LINE_4 (32)
+#define LINE_5 (40)
+#define LINE_6 (48)
+
 void UI_GenerateChannelString(char *pString, uint8_t Channel);
 void UI_GenerateChannelStringEx(char *pString, bool bShowPrefix,
                                 uint8_t ChannelNumber);
@@ -35,11 +59,18 @@ void UI_DisplaySmallDigits(uint8_t Size, const char *pString, uint8_t X,
                            uint8_t Y);
 void PutPixel(uint8_t x, uint8_t y, uint8_t fill);
 void PutPixelStatus(uint8_t x, uint8_t y, bool fill);
-void DrawHLine(int sy, int ey, int nx, bool fill);
+void DrawVLine(int sy, int ey, int nx, bool fill);
+void DrawHLine(int sx, int ex, int ny, bool fill);
+void DrawRect(int x, int y, int w, int h, bool color);
+void FillRect (int x, int y, int w, int h, bool color);
 void UI_PrintStringSmallest(const char *pString, uint8_t x, uint8_t y,
                             bool statusbar, bool fill);
+void UI_PrintDigitLarge16x26(uint8_t digit, uint8_t x, uint8_t y, bool fill);                            
 void UI_ClearAppScreen();
+void UI_ClearFrameBuffer();
+void UI_ClearStatusLine();
 void UI_DrawScanListFlag(uint8_t *pLine, uint8_t attrs);
 bool UI_NoChannelName(char *channelName);
+void UI_Printf(uint8_t x, uint8_t y, font_t font, bool fill, const char *format, ...);
 
 #endif

@@ -32,8 +32,8 @@ static void Render(void) {
   char String[7];
   uint8_t i;
 
-  memset(gStatusLine, 0, sizeof(gStatusLine));
-  memset(gFrameBuffer, 0, sizeof(gFrameBuffer));
+  UI_ClearStatusLine();
+  UI_ClearFrameBuffer();
   strcpy(String, "LOCK");
   UI_PrintString(String, 0, 127, 1, 10, true);
   for (i = 0; i < 6; i++) {

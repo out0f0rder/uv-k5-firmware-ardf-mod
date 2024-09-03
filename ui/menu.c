@@ -185,7 +185,7 @@ void UI_DisplayMenu(void) {
   char Contact[16];
   uint8_t i;
 
-  memset(gFrameBuffer, 0, sizeof(gFrameBuffer));
+  UI_ClearFrameBuffer();
 
   uint8_t offset = Clamp(gMenuCursor - 2, 0, gMenuListCount - 6);
   for (i = 0; i < 6; ++i) {

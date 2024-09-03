@@ -1,21 +1,30 @@
 TARGET = firmware
 
+
 ENABLE_AIRCOPY := 0
-ENABLE_AM_FIX := 1
+ENABLE_AM_FIX := 0
 ENABLE_FMRADIO := 0
 ENABLE_OVERLAY := 0
 ENABLE_SPECTRUM := 1
+ENABLE_ARDF := 1
 ENABLE_SWD := 0
 ENABLE_TX1750 := 0
-ENABLE_UART := 1
+ENABLE_UART := 0
 ENABLE_NOSCANTIMEOUT := 1
 ENABLE_KEEPNAMEONSAVE := 1
 ENABLE_ALL_REGISTERS := 1
 ENABLE_FASTER_CHANNEL_SCAN := 1
-ENABLE_UART_CAT := 1
+ENABLE_UART_CAT := 0
 
 SPECTRUM_AUTOMATIC_SQUELCH := 1
 SPECTRUM_EXTRA_VALUES := 1
+
+#ENABLE_NOAA     := 0
+#ENABLE_VOX      := 1
+#ENABLE_ALARM    := 0
+#ENABLE_DTMF_CALLING := 1
+#ENABLE_FLASHLIGHT := 1
+
 
 BSP_DEFINITIONS := $(wildcard hardware/*/*.def)
 BSP_HEADERS := $(patsubst hardware/%,bsp/%,$(BSP_DEFINITIONS))
@@ -76,11 +85,14 @@ endif
 OBJS += app/generic.o
 OBJS += app/main.o
 OBJS += app/menu.o
-OBJS += app/appmenu.o
+#OBJS += app/appmenu.o
 OBJS += app/contextmenu.o
 OBJS += app/scanner.o
 ifeq ($(ENABLE_SPECTRUM), 1)
 OBJS += app/spectrum.o
+endif
+ifeq ($(ENABLE_ARDF), 1)
+OBJS += app/ardf.o
 endif
 ifeq ($(ENABLE_UART),1)
 OBJS += app/uart.o
@@ -111,7 +123,7 @@ OBJS += ui/inputbox.o
 OBJS += ui/lock.o
 OBJS += ui/main.o
 OBJS += ui/menu.o
-OBJS += ui/appmenu.o
+#OBJS += ui/appmenu.o
 OBJS += ui/contextmenu.o
 OBJS += ui/rssi.o
 OBJS += ui/scanner.o
@@ -121,15 +133,17 @@ OBJS += ui/welcome.o
 
 OBJS += ui/split.o
 
-OBJS += apps/abscanner.o
-OBJS += apps/scanlist.o
+#OBJS += apps/abscanner.o
+#OBJS += apps/scanlist.o
 
 OBJS += version.o
 
 OBJS += main.o
 
 ifeq ($(OS),Windows_NT)
-TOP := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
+# TOP := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
+TOP := "."
+$(warning TOP is $(TOP))
 else
 TOP := $(shell pwd)
 endif
@@ -202,7 +216,7 @@ CFLAGS += -g
 LDFLAGS += -g
 endif
 
-INC =
+INC = -I .
 INC += -I $(TOP)
 INC += -I $(TOP)/external/CMSIS_5/CMSIS/Core/Include/
 INC += -I $(TOP)/external/CMSIS_5/Device/ARM/ARMCM0/Include
@@ -213,7 +227,7 @@ DEPS = $(OBJS:.o=.d)
 
 all: $(TARGET)
 	$(OBJCOPY) -O binary $< $<.bin
-	-python3 fw-pack.py $<.bin $(GIT_HASH) $<.packed.bin
+	-C:\Python310\python fw-pack.py $<.bin $(GIT_HASH) $<.packed.bin
 	$(SIZE) $<
 
 debug:

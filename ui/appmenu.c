@@ -2,9 +2,11 @@
 #include "helper.h"
 #include "ui.h"
 
+/*
 void UI_DisplayAppMenu() {
   char String[16];
-  memset(gFrameBuffer, 0, sizeof(gFrameBuffer));
+
+  UI_ClearFrameBuffer();
 
   UI_PrintStringSmallBold("Apps", 0, 0, 0);
 
@@ -15,3 +17,4 @@ void UI_DisplayAppMenu() {
 
   ST7565_BlitFullScreen();
 }
+*/

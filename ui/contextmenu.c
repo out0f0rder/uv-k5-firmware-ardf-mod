@@ -31,7 +31,7 @@ const char chars[] = "123*4560789F";
 void UI_DisplayContextMenu() {
   char String[16];
 
-  memset(gFrameBuffer, 0, sizeof(gFrameBuffer));
+  UI_ClearFrameBuffer();
 
   if (IS_MR_CHANNEL(gTxVfo->CHANNEL_SAVE)) {
     sprintf(String, "MR channel menu");

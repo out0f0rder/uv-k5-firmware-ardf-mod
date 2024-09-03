@@ -510,9 +510,9 @@ static void DUALWATCH_Alternate(void) {
 }
 
 void APP_CheckRadioInterrupts(void) {
-  if (gAppToDisplay == APP_SCANNER) {
-    return;
-  }
+//  if (gAppToDisplay == APP_SCANNER) {
+//    return;
+//  }
 
   while (BK4819_ReadRegister(BK4819_REG_0C) & 1U) {
     uint16_t Mask;
@@ -881,6 +881,7 @@ void APP_TimeSlice10ms(void) {
     __enable_irq();
   }
 #endif
+
 
   if (gAppToDisplay) {
     if (apps[gAppToDisplay].update) {
@@ -1496,6 +1497,7 @@ static void APP_ProcessKey(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld) {
 #endif
       }
     } else if (Key != KEY_SIDE1 && Key != KEY_SIDE2) {
+      
       if (gAppToDisplay) {
         if (apps[gAppToDisplay].key) {
           apps[gAppToDisplay].key(Key, bKeyPressed, bKeyHeld);
@@ -1504,6 +1506,7 @@ static void APP_ProcessKey(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld) {
           return;
         }
       }
+
       switch (gScreenToDisplay) {
       case DISPLAY_MAIN:
         MAIN_ProcessKeys(Key, bKeyPressed, bKeyHeld);
@@ -1519,9 +1522,9 @@ static void APP_ProcessKey(KEY_Code_t Key, bool bKeyPressed, bool bKeyHeld) {
       case DISPLAY_CONTEXT_MENU:
         CONTEXTMENU_ProcessKeys(Key, bKeyPressed, bKeyHeld);
         break;
-      case DISPLAY_APP_MENU:
-        APPMENU_ProcessKeys(Key, bKeyPressed, bKeyHeld);
-        break;
+      //case DISPLAY_APP_MENU:
+      //  APPMENU_ProcessKeys(Key, bKeyPressed, bKeyHeld);
+      //  break;
 #if defined(ENABLE_AIRCOPY)
       case DISPLAY_AIRCOPY:
         AIRCOPY_ProcessKeys(Key, bKeyPressed, bKeyHeld);
