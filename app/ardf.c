@@ -1,6 +1,4 @@
-/* Copyright 2023 fagci
- * https://github.com/fagci
- *
+/*
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -17,6 +15,7 @@
 #include "../app/spectrum.h"
 #include "app.h"
 #include "driver/backlight.h"
+#include "driver/eeprom.h"
 #include "finput.h"
 #include <string.h>
 
@@ -26,6 +25,7 @@ typedef struct ARDFState {
   BK4819_FilterBandwidth_t listenBw;
   ModulationType modulationType;
   uint16_t delayUS;
+  bool beep;
 } ARDFState;
 
 
@@ -35,6 +35,7 @@ ARDFState state = {
     .listenBw = BK4819_FILTER_BW_WIDE,
     .modulationType = MOD_RAW,
     .delayUS = 700,
+    .beep = true,
 };
 
 
@@ -200,7 +201,7 @@ const tGainRecord ardfGainTable[] = {
 
 unsigned int ardfGainTableSize = ARRAY_SIZE(ardfGainTable);
 
-bool ardfIsInitialized = false;
+bool ardfIsRunning = false;
 bool ardfRedrawStatus = true;
 bool ardfRedrawScreen = false;
 KeyboardState key = {KEY_INVALID, KEY_INVALID, 0};
@@ -209,6 +210,8 @@ uint16_t ardfRegistersBackup[128];
 const uint8_t ardfRegistersToBackup[] = {
     0x13, 0x30, 0x31, 0x37, 0x3D, 0x40, 0x43, 0x47, 0x48, 0x7D, 0x7E,
 };
+
+void UpdateBatteryInfo();
 
 #define BEEP_DURATION 50
 #define rssiRTsz 64
@@ -247,24 +250,29 @@ void increaseGain()
     }
 }
 
-uint8_t uhf_squelch_open_rssi[] = {0x00, 0x2c,0x34,0x3a,0x42,0x48,0x50,0x58,0x5e,0x66};
-uint8_t uhf_squelch_close_rssi[] = {0x7f, 0x26,0x2e,0x36,0x3e,0x44,0x4c,0x54,0x5c,0x64};
-uint8_t uhf_squelch_open_noise[] = {0xff, 0x35,0x30,0x2c,0x28,0x24,0x20,0x1c,0x18,0x14};
-uint8_t uhf_squelch_close_noise[] = {0x00, 0x38,0x34,0x2f,0x2b,0x27,0x23,0x1f,0x1b,0x17};
-uint8_t uhf_squelch_close_glitch[] = {0x7f, 0x20,0x18,0x14,0x11,0x0e,0x0b,0x08,0x03,0x02};
-uint8_t uhf_squelch_open_glitch[] = {0xff, 0x1e,0x15,0x11,0x0e,0x0b,0x08,0x05,0x05,0x04};
 
 void bkSetSquelch(uint8_t l)
 {
-    if(l > 9) l = 9;
-    if(l==0) l = 1;
-    BK4819_SetupSquelch(uhf_squelch_open_rssi[l],
-        uhf_squelch_close_rssi[l],
-        uhf_squelch_open_noise[l],
-        uhf_squelch_close_noise[l],
-        uhf_squelch_close_glitch[l],
-        uhf_squelch_open_glitch[l]
-    );
+  if(l > 9) l = 9;
+  if(l==0) l = 1;
+  
+  uint8_t uhf_squelch_open_rssi;
+  uint8_t uhf_squelch_close_rssi;
+  uint8_t uhf_squelch_open_noise;
+  uint8_t uhf_squelch_close_noise;
+  uint8_t uhf_squelch_close_glitch;
+  uint8_t uhf_squelch_open_glitch;  
+  uint16_t Base = 0x1E00 + l;
+  
+  EEPROM_ReadBuffer(Base + 0x00, &uhf_squelch_open_rssi, 1);
+  EEPROM_ReadBuffer(Base + 0x10, &uhf_squelch_close_rssi, 1);
+  EEPROM_ReadBuffer(Base + 0x20, &uhf_squelch_open_noise, 1);
+  EEPROM_ReadBuffer(Base + 0x30, &uhf_squelch_close_noise, 1);
+  EEPROM_ReadBuffer(Base + 0x40, &uhf_squelch_close_glitch, 1);
+  EEPROM_ReadBuffer(Base + 0x50, &uhf_squelch_open_glitch, 1);
+  BK4819_SetupSquelch(  uhf_squelch_open_rssi, uhf_squelch_close_rssi, 
+                        uhf_squelch_open_noise, uhf_squelch_close_noise,
+                        uhf_squelch_close_glitch, uhf_squelch_open_glitch);
 }
 
 int mapInt(int value, int fromLow, int fromHigh, int toLow, int toHigh)
@@ -299,24 +307,100 @@ void ardfRestoreRegisters()
   }
 }
 
-void DeInitARDF() 
+void deInitARDF() 
 {
   ardfRestoreRegisters();
-  ardfIsInitialized = false;
+  ardfIsRunning = false;
+}
+
+void beepWithAudioSwitch(uint16_t tone, uint16_t durationMS)
+{
+    uint32_t delayUs = 1000000l/tone/2;
+    uint32_t repeat = (tone * durationMS) / 1000;
+    for(int i =0; i < repeat; i++) {
+        GPIO_ClearBit(&GPIOC->DATA, GPIOC_PIN_AUDIO_PATH);
+        SYSTICK_DelayUs(delayUs);
+        GPIO_SetBit(&GPIOC->DATA, GPIOC_PIN_AUDIO_PATH);
+        SYSTICK_DelayUs(delayUs);
+    }    
+}
+
+void initARDF()
+{
+  BK4819_ToggleGpioOut(BK4819_GPIO0_PIN28_GREEN, false);
+
+  BK4819_Init();
+  RADIO_SetupRegisters(false);
+  //BK4819_SetAGC(0); // normalize gain
+  //BK4819_WriteRegister(BK4819_REG_48, (11u << 12) | (0u << 10) | (gEeprom.VOLUME_GAIN << 4) | (gEeprom.DAC_GAIN << 0));
+  
+  BK4819_TuneTo(state.frequency, true);
+  BK4819_SetFilterBandwidth(state.listenBw);
+
+  bkSetSquelch(1);
+
+  BK4819_ToggleAFDAC(1);
+  BK4819_ToggleAFBit(1);
+  BK4819_SetAGC(0); // normalize gain
+
+  BK4819_WriteRegister(BK4819_REG_48, (11u << 12) | (0u << 10) | (gEeprom.VOLUME_GAIN << 4) | (gEeprom.DAC_GAIN << 0));
+
+  BK4819_WriteRegister(BK4819_REG_7E, 0xB02E);
+
+  updateBKGain(state.gain);
+
+  BK4819_SetModulation(state.modulationType);
+
+  BK4819_ToggleGpioOut(BK4819_GPIO0_PIN28_RX_ENABLE, true);
+
+  
+  GPIO_SetBit(&GPIOC->DATA, GPIOC_PIN_AUDIO_PATH);
+}
+
+uint32_t findMaxAndAvgRSSI(uint32_t f1, uint32_t f2, uint32_t steps, BK4819_FilterBandwidth_t bw, uint32_t delayUs, uint16_t *avgRSSI, uint16_t *maxRSSI)
+{
+    *maxRSSI = 0;
+    *avgRSSI = 0;
+    uint32_t maxF = 0;
+    int32_t stepF = (f2 - f1)/steps;
+    for(uint32_t f = f1; f < f2; f += stepF) {
+
+        BK4819_TuneTo(f, false);
+        {
+            uint32_t Reg = BK4819_ReadRegister(BK4819_REG_30);
+            Reg &= ~1;
+            BK4819_WriteRegister(BK4819_REG_30, Reg);
+            Reg |= 1;
+            BK4819_WriteRegister(BK4819_REG_30, Reg);
+        }
+        SYSTICK_DelayUs(delayUs);
+        uint16_t rssi;
+        if(stepF > 2500) { 
+            //rssi = BK4819_ReadRegister(0x62) & 0x0FF;
+            rssi = (BK4819_ReadRegister(0x62) >> 8) & 0x0FF;
+        } else {
+            rssi = BK4819_GetRSSI();
+        }
+        
+        if(rssi > *maxRSSI) {
+            *maxRSSI = rssi;
+            maxF = f;
+        }
+        *avgRSSI += rssi;
+    }
+    *avgRSSI /= steps;
+    return maxF;
 }
 
 bool adjustFreq = false;
-void ardfOnKeyDown(uint8_t key) 
+void ardfOnKeyDown(uint8_t keyPressed) 
 {
-  switch (key) {
-    case KEY_MENU:
-        adjustFreq = ! adjustFreq;
-        break;
+  switch (keyPressed) {
     case KEY_EXIT:
         if(adjustFreq) {
             adjustFreq = false;
         } else {
-            DeInitARDF();
+            deInitARDF();
         }
         break;
     case KEY_DOWN:
@@ -326,6 +410,7 @@ void ardfOnKeyDown(uint8_t key)
         } else {
             decreaseGain();
         }
+        g_SquelchLost = false;
         break;
     case KEY_UP:
         if(adjustFreq) {
@@ -334,15 +419,101 @@ void ardfOnKeyDown(uint8_t key)
         } else {
             increaseGain();
         }
+        g_SquelchLost = false;
         break;
     case KEY_1:
+        adjustFreq = ! adjustFreq;
+        break;
+    case KEY_2:
+        if(state.modulationType == MOD_RAW) 
+            state.modulationType = MOD_FM;
+        else
+            state.modulationType = MOD_RAW;
+        BK4819_SetModulation(state.modulationType);
+        break;
+    case KEY_3:
+        state.beep = ! state.beep;
+        break;
+    case KEY_4:
         state.listenBw = (state.listenBw + 1) % 3;
         BK4819_SetFilterBandwidth(state.listenBw);
         break;
-    case KEY_2:
-        state.modulationType = (state.modulationType + 1) % 5;
-        BK4819_SetModulation(state.modulationType);
+    case KEY_STAR: {
+        uint16_t avgRSSI, maxRSSI;
+        uint32_t f, f1, f2, span;
+        f =   43000000;
+        span = 1000000;
+        
+        updateBKGain(0);
+
+        BK4819_WriteRegister(0x43, 0b0000000110111100);
+        while(true) {
+            key.current = KEYBOARD_Poll();
+            if(key.current == KEY_EXIT) {
+                SYSTEM_DelayMs(100);
+                break;
+            }
+            UI_ClearFrameBuffer();
+            f1 = f - span;
+            f2 = f + span;
+            uint32_t fM = findMaxAndAvgRSSI(f1, f2, 50, BK4819_FILTER_BW_WIDE, 900, &avgRSSI, &maxRSSI);
+            UI_Printf(0, 20, FONT_BIG, true, "%i", f/100);
+            UI_Printf(0, 40, FONT_BIG, true, "%ik %i %i", span/100, avgRSSI, maxRSSI);
+            ST7565_BlitFullScreen();
+            if(maxRSSI > avgRSSI + 10) {
+                beepWithAudioSwitch(500, 10);
+                span /= 3;
+                f = fM;
+                if(span < 2500) {
+                    UI_ClearFrameBuffer();
+                    UI_Printf(0, 30, FONT_BIG, true, "%i FIN", f/100);
+                    ST7565_BlitFullScreen();
+                    SYSTEM_DelayMs(1000);
+                    state.frequency = f;
+                    break;
+                }
+                //SYSTEM_DelayMs(1000);
+            }
+        }
+        initARDF();
         break;
+    }
+    case KEY_PTT: {
+
+        while(!GPIO_CheckBit(&GPIOC->DATA, GPIOC_PIN_PTT)) {
+            SYSTEM_DelayMs(100);
+        }
+
+        UI_ClearFrameBuffer();
+        UI_Printf(40, 30, FONT_BIG, true, "TONE");
+        ST7565_BlitFullScreen();
+
+
+        BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, true);
+
+        BK4819_ToggleGpioOut(BK4819_GPIO0_PIN28_RX_ENABLE, false);
+        BK4819_SetFilterBandwidth(BK4819_FILTER_BW_WIDE);
+        BK4819_SetFrequency(state.frequency);
+        BK4819_PrepareTransmit();
+        BK4819_SelectFilter(state.frequency);
+        BK4819_ToggleGpioOut(BK4819_GPIO1_PIN29_PA_ENABLE, true);
+        BK4819_SetupPowerAmplifier(gCurrentVfo->TXP_CalculatedSetting, state.frequency);
+        BK4819_SetModulation(MOD_FM);
+
+        BK4819_TransmitTone(true, 1750);
+
+        while(GPIO_CheckBit(&GPIOC->DATA, GPIOC_PIN_PTT)) {
+            SYSTEM_DelayMs(100);
+        }
+
+        BK4819_SetupPowerAmplifier(0, 0);
+
+        BK4819_ToggleGpioOut(BK4819_GPIO5_PIN1_RED, false);
+
+        initARDF();
+        
+        break;
+    }
     default:
         break;
   }
@@ -402,18 +573,6 @@ void checkBK4819Interrupts(void)
 
 uint32_t getGlobalSysTick();
 
-void beepWithAudioSwitch(uint16_t tone, uint16_t durationMS)
-{
-    uint32_t delayUs = 1000000l/tone/2;
-    uint32_t repeat = (tone * durationMS) / 1000;
-    for(int i =0; i < repeat; i++) {
-        GPIO_ClearBit(&GPIOC->DATA, GPIOC_PIN_AUDIO_PATH);
-        SYSTICK_DelayUs(delayUs);
-        GPIO_SetBit(&GPIOC->DATA, GPIOC_PIN_AUDIO_PATH);
-        SYSTICK_DelayUs(delayUs);
-    }    
-}
-
 void drawFrame()
 {
 
@@ -431,34 +590,23 @@ void drawFrame()
 
 void drawStatus()
 {
-    char str[16];
+    char str[32];
     char bwC;
     char modC;
     if(state.listenBw == BK4819_FILTER_BW_WIDE) {
         bwC = 'W';
     } else if(state.listenBw == BK4819_FILTER_BW_NARROW) {
-        bwC = 'N';
+        bwC = 'w';
     } else {
         bwC = 'n';
     }
-    switch(state.modulationType) {
-        case MOD_RAW:
-            modC = 'R';
-            break;
-        case MOD_AM:
-            modC = 'A';
-            break;
-        case MOD_USB:
-            modC = 'U';
-            break;
-        case MOD_FM:
-            modC = 'F';
-            break;
-        default:
-            modC = 'B';
-            break;
+
+    if(state.modulationType == MOD_RAW) {
+        modC = 'A';
+    } else {
+        modC = 'F';
     }
-    snprintf(str, 16, "%03i.%03iMHz %c %c", state.frequency/100000, (state.frequency/100)%1000, bwC, modC);
+    snprintf(str, 32, "1:%03i.%03iMHz 2:%c 3:%c 4:%c", state.frequency/100000, (state.frequency/100)%1000, modC, state.beep?'+':'-', bwC);
     if(adjustFreq) {
         UI_PrintStringSmallest(str, 1, 0, true, (getGlobalSysTick()%64 < 32));
     } else {
@@ -534,18 +682,14 @@ void ardfTick()
    
     FillRect(2, (LCD_HEIGHT - normRSSI/2), 9, normRSSI/2, true);
 
-    //snprintf(str, 16, "GAIN %01i", state.gain + 1);
-    //UI_PrintStringSmall(str, 30, 55, 0);
     UI_Printf(20, 0, FONT_SMALL, true, "GAIN %01i", state.gain + 1);
     
-
     //* RSSI BIG DIGIT
     UI_PrintDigitLarge16x26(normRSSI/10, 14, 24, true);
     UI_PrintDigitLarge16x26(normRSSI%10, 38, 24, true);
     
-
     if((g_SquelchLost) && (g_SquelchLost != prevSquelchLost)) {
-        beepWithAudioSwitch(400+normRSSI*40, BEEP_DURATION);
+        if(state.beep) beepWithAudioSwitch(400+normRSSI*40, BEEP_DURATION);
     }
     prevSquelchLost = g_SquelchLost;
 
@@ -556,9 +700,21 @@ void ardfTick()
 */
 
     if (gNextTimeslice500ms) {
-      APP_TimeSlice500ms();
+      BATTERY_GetReadings(false);
       gNextTimeslice500ms = false;
+      if(gLowBattery) {
+        if (++gLowBatteryCountdown < 30) {
+            if (gLowBatteryCountdown == 29 && !gChargingWithTypeC) {
+                beepWithAudioSwitch(500, 60);
+                SYSTEM_DelayMs(60);
+                beepWithAudioSwitch(500, 60);
+            }      
+        } else {
+            gLowBatteryCountdown = 0;
+        }
+      }
     }
+
 
     drawStatus();
     
@@ -567,6 +723,8 @@ void ardfTick()
 }
 
 void APP_RunARDF() {
+
+
   ardfBackupRegisters();
 
   VFO_Info_t vfo = gEeprom.VfoInfo[gEeprom.TX_VFO];
@@ -575,42 +733,15 @@ void APP_RunARDF() {
   ardfRedrawStatus = true;
   ardfRedrawScreen = true;
 
-  ardfIsInitialized = true;
-
   UI_ClearFrameBuffer();
   ST7565_BlitFullScreen();
 
-  BK4819_ToggleGpioOut(BK4819_GPIO0_PIN28_GREEN, false);
-
-  BK4819_Init();
-  RADIO_SetupRegisters(false);
-  //BK4819_SetAGC(0); // normalize gain
-  //BK4819_WriteRegister(BK4819_REG_48, (11u << 12) | (0u << 10) | (gEeprom.VOLUME_GAIN << 4) | (gEeprom.DAC_GAIN << 0));
+  initARDF(); 
   
-
-  BK4819_SetModulation(state.modulationType);
-  BK4819_TuneTo(state.frequency, true);
-  BK4819_SetFilterBandwidth(state.listenBw);
-
-  bkSetSquelch(0);
-
-  BK4819_ToggleAFDAC(1);
-  BK4819_ToggleAFBit(1);
-  BK4819_SetAGC(0); // normalize gain
-
-  BK4819_WriteRegister(BK4819_REG_48, (11u << 12) | (0u << 10) | (gEeprom.VOLUME_GAIN << 4) | (gEeprom.DAC_GAIN << 0));
-
-  BK4819_WriteRegister(BK4819_REG_7E, 0xB02E);
-
-  updateBKGain(state.gain);
-
-  BK4819_ToggleGpioOut(BK4819_GPIO0_PIN28_RX_ENABLE, true);
-
-  
-  GPIO_SetBit(&GPIOC->DATA, GPIOC_PIN_AUDIO_PATH);
-
-  while (ardfIsInitialized) {
+  ardfIsRunning = true;
+  while (ardfIsRunning) {
     ardfTick();   
   }
-  DeInitARDF();
+  deInitARDF();
+  vfo.pRX->Frequency = state.frequency;
 }

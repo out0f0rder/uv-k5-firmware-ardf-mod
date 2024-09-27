@@ -600,7 +600,7 @@ static void DrawSpectrum() {
   }
 }
 
-static void UpdateBatteryInfo() {
+void UpdateBatteryInfo() {
   for (uint8_t i = 0; i < 4; i++) {
     BOARD_ADC_GetBatteryInfo(&gBatteryVoltages[i], &gBatteryCurrent);
   }
@@ -638,8 +638,10 @@ static void DrawStatus() {
         UI_PrintStringSmallest(p->name, 0, 0, true, true);
       }
 
-      sprintf(String, "D: %u us", settings.delayUS);
-      UI_PrintStringSmallest(String, 64, 0, true, true);
+      //sprintf(String, "D: %u us", settings.delayUS);
+      //UI_PrintStringSmallest(String, 64, 0, true, true);
+      UI_Printf(64, 0, FONT_SMALLEST, true, "D: %u us", settings.delayUS);
+      
     }
 #ifdef ENABLE_ALL_REGISTERS
   }
@@ -681,29 +683,37 @@ static void DrawF(uint32_t f) {
 
 static void DrawNums() {
   if (currentState == SPECTRUM) {
-    sprintf(String, "%ux", GetStepsCount());
-    UI_PrintStringSmallest(String, 0, 2, false, true);
-    sprintf(String, "%u.%02uk", GetScanStep() / 100, GetScanStep() % 100);
-    UI_PrintStringSmallest(String, 0, 8, false, true);
+    //sprintf(String, "%ux", GetStepsCount());
+    //UI_PrintStringSmallest(String, 0, 2, false, true);
+    UI_Printf(0, 2, FONT_SMALLEST, true, "%ux", GetStepsCount());
+    //sprintf(String, "%u.%02uk", GetScanStep() / 100, GetScanStep() % 100);
+    //UI_PrintStringSmallest(String, 0, 8, false, true);
+    UI_Printf(0, 8, FONT_SMALLEST, true, "%u.%02uk", GetScanStep() / 100, GetScanStep() % 100);
   }
 
   if (IsCenterMode()) {
     uint32_t cf = GetScreenF(currentFreq);
-    sprintf(String, "%u.%05u \xB1%u.%02uk", cf / 100000, cf % 100000,
+    //sprintf(String, "%u.%05u \xB1%u.%02uk", cf / 100000, cf % 100000,
+    //        settings.frequencyChangeStep / 100,
+    //        settings.frequencyChangeStep % 100);
+    //UI_PrintStringSmallest(String, 36, 49, false, true);
+    UI_Printf(36, 49, FONT_SMALLEST, true, "%u.%05u \xB1%u.%02uk", cf / 100000, cf % 100000,
             settings.frequencyChangeStep / 100,
             settings.frequencyChangeStep % 100);
-    UI_PrintStringSmallest(String, 36, 49, false, true);
   } else {
     uint32_t fs = GetScreenF(GetFStart());
     uint32_t fe = GetScreenF(GetFEnd());
-    sprintf(String, "%u.%05u", fs / 100000, fs % 100000);
-    UI_PrintStringSmallest(String, 0, 49, false, true);
+    //sprintf(String, "%u.%05u", fs / 100000, fs % 100000);
+    //UI_PrintStringSmallest(String, 0, 49, false, true);
+    UI_Printf(0, 49, FONT_SMALLEST, true, "%u.%05u", fs / 100000, fs % 100000);
 
-    sprintf(String, "\xB1%uk", settings.frequencyChangeStep / 100);
-    UI_PrintStringSmallest(String, 52, 49, false, true);
+    //sprintf(String, "\xB1%uk", settings.frequencyChangeStep / 100);
+    //UI_PrintStringSmallest(String, 52, 49, false, true);
+    UI_Printf(52, 49, FONT_SMALLEST, true, "\xB1%uk", settings.frequencyChangeStep / 100);
 
-    sprintf(String, "%u.%05u", fe / 100000, fe % 100000);
-    UI_PrintStringSmallest(String, 93, 49, false, true);
+    //sprintf(String, "%u.%05u", fe / 100000, fe % 100000);
+    //UI_PrintStringSmallest(String, 93, 49, false, true);
+    UI_Printf(93, 49, FONT_SMALLEST, true, "%u.%05u", fe / 100000, fe % 100000);
   }
 }
 
@@ -1114,8 +1124,9 @@ static void RenderStill() {
     sprintf(String, "S9+%u0", s - 9);
   }
   UI_PrintStringSmallest(String, 4, 10, false, true);
-  sprintf(String, "%d dBm", dbm);
-  UI_PrintStringSmallest(String, 32, 10, false, true);
+  //sprintf(String, "%d dBm", dbm);
+  //UI_PrintStringSmallest(String, 32, 10, false, true);
+  UI_Printf(32, 10, FONT_SMALLEST, true, "%d dBm", dbm);
 
   if (isTransmitting) {
     uint8_t afDB = BK4819_ReadRegister(0x6F) & 0b1111111;
@@ -1163,12 +1174,16 @@ static void RenderStill() {
         }
       }
       RegisterSpec rs = registerSpecs[idx];
-      sprintf(String, "%s", rs.name);
-      UI_PrintStringSmallest(String, offset + 2, row * 8 + 2, false,
-                             menuState != idx);
-      sprintf(String, "%u", BK4819_GetRegValue(rs));
-      UI_PrintStringSmallest(String, offset + 2, (row + 1) * 8 + 1, false,
-                             menuState != idx);
+      //sprintf(String, "%s", rs.name);
+      //UI_PrintStringSmallest(String, offset + 2, row * 8 + 2, false,
+      //                       menuState != idx);
+      UI_Printf(offset + 2, row * 8 + 2, FONT_SMALLEST, menuState != idx, "%s", rs.name);
+
+      //sprintf(String, "%u", BK4819_GetRegValue(rs));
+      //UI_PrintStringSmallest(String, offset + 2, (row + 1) * 8 + 1, false,
+      //                       menuState != idx);
+      UI_Printf(offset + 2, (row + 1) * 8 + 1, FONT_SMALLEST, menuState != idx, "%u", BK4819_GetRegValue(rs));
+
     }
 #ifdef ENABLE_ALL_REGISTERS
   }

@@ -8,7 +8,7 @@ ENABLE_OVERLAY := 0
 ENABLE_SPECTRUM := 1
 ENABLE_ARDF := 1
 ENABLE_SWD := 0
-ENABLE_TX1750 := 0
+ENABLE_TX1750 := 1
 ENABLE_UART := 0
 ENABLE_NOSCANTIMEOUT := 1
 ENABLE_KEEPNAMEONSAVE := 1
@@ -160,7 +160,8 @@ ASFLAGS = -c -mcpu=cortex-m0
 ifeq ($(ENABLE_OVERLAY),1)
 ASFLAGS += -DENABLE_OVERLAY
 endif
-CFLAGS = -Os -Wall -Werror -mcpu=cortex-m0 -fno-builtin -fshort-enums -fno-delete-null-pointer-checks -std=c11 -MMD
+CFLAGS = -Os -Wall -Werror -mcpu=cortex-m0 -fno-builtin -fshort-enums -fno-delete-null-pointer-checks -std=c11 -MMD 
+#-flto=auto
 CFLAGS += -DPRINTF_INCLUDE_CONFIG_H
 CFLAGS += -DGIT_HASH=\"$(GIT_HASH)\"
 ifeq ($(ENABLE_AIRCOPY),1)
