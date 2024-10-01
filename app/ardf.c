@@ -366,17 +366,16 @@ uint32_t findMaxAndAvgRSSI(uint32_t f1, uint32_t f2, uint32_t steps, BK4819_Filt
     for(uint32_t f = f1; f < f2; f += stepF) {
 
         BK4819_TuneTo(f, false);
-        {
-            uint32_t Reg = BK4819_ReadRegister(BK4819_REG_30);
-            Reg &= ~1;
-            BK4819_WriteRegister(BK4819_REG_30, Reg);
-            Reg |= 1;
-            BK4819_WriteRegister(BK4819_REG_30, Reg);
-        }
+
+        uint32_t Reg = BK4819_ReadRegister(BK4819_REG_30);
+        Reg &= ~1;
+        BK4819_WriteRegister(BK4819_REG_30, Reg);
+        Reg |= 1;
+        BK4819_WriteRegister(BK4819_REG_30, Reg);
+
         SYSTICK_DelayUs(delayUs);
         uint16_t rssi;
         if(stepF > 2500) { 
-            //rssi = BK4819_ReadRegister(0x62) & 0x0FF;
             rssi = (BK4819_ReadRegister(0x62) >> 8) & 0x0FF;
         } else {
             rssi = BK4819_GetRSSI();
@@ -464,7 +463,7 @@ void ardfOnKeyDown(uint8_t keyPressed)
                 beepWithAudioSwitch(500, 10);
                 span /= 3;
                 f = fM;
-                if(span < 2500) {
+                if(span < 1500) {
                     UI_ClearFrameBuffer();
                     UI_Printf(0, 30, FONT_BIG, true, "%i FIN", f/100);
                     ST7565_BlitFullScreen();
@@ -678,15 +677,18 @@ void ardfTick()
             if(rssiRT[idx] > maxRTRSSI) maxRTRSSI = rssiRT[idx];
         }
     }
-    UI_Printf(66, 33, FONT_SMALL, true, "%02i", maxRTRSSI);
-   
+    //UI_Printf(66, 33, FONT_SMALL, true, "%02i", maxRTRSSI);
+    UI_Printf(66, 33, FONT_SMALL, true, "%02i", normRSSI);
+
     FillRect(2, (LCD_HEIGHT - normRSSI/2), 9, normRSSI/2, true);
 
     UI_Printf(20, 0, FONT_SMALL, true, "GAIN %01i", state.gain + 1);
     
     //* RSSI BIG DIGIT
-    UI_PrintDigitLarge16x26(normRSSI/10, 14, 24, true);
-    UI_PrintDigitLarge16x26(normRSSI%10, 38, 24, true);
+    //UI_PrintDigitLarge16x26(normRSSI/10, 14, 24, true);
+    //UI_PrintDigitLarge16x26(normRSSI%10, 38, 24, true);
+    UI_PrintDigitLarge16x26(maxRTRSSI/10, 14, 24, true);
+    UI_PrintDigitLarge16x26(maxRTRSSI%10, 38, 24, true);
     
     if((g_SquelchLost) && (g_SquelchLost != prevSquelchLost)) {
         if(state.beep) beepWithAudioSwitch(400+normRSSI*40, BEEP_DURATION);
